@@ -1,0 +1,4 @@
+uiautomation
+Pillow
+pywin32
+psutil
