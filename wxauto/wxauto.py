@@ -259,7 +259,58 @@ class WeChat:
             if editbox.GetValuePattern().Value:
                 break
         editbox.SendKeys('{Enter}')
-        
+
+    def SendClipboardMsg(self, who=None, clear=True):
+        """发送剪切板内容消息。目前支持剪切板上内容为 文本、图片、文件类型 时进行直接发送
+
+        Args:
+            who (str): 要发送给谁，如果为None，则发送到当前聊天页面。  *最好完整匹配，优先使用备注
+            clear (bool, optional): 是否清除原本的内容，
+        """
+        # 判断剪切板是否为空
+        win32clipboard.OpenClipboard()
+        empty = True
+        if win32clipboard.IsClipboardFormatAvailable(win32clipboard.CF_TEXT):
+            empty = False
+        if win32clipboard.IsClipboardFormatAvailable(win32clipboard.CF_DIB):
+            empty = False
+        if win32clipboard.IsClipboardFormatAvailable(win32clipboard.CF_HDROP):
+            empty = False
+        win32clipboard.CloseClipboard()
+        if empty:
+            print("剪切板为空（没有图片、文件、文字）,不做操作并返回")
+            return None
+
+        if who:
+            try:
+                editbox = self.ChatBox.EditControl(searchDepth=10)
+                if who in self.CurrentChat() and who in editbox.Name:
+                    pass
+                else:
+                    self.ChatWith(who)
+                    editbox = self.ChatBox.EditControl(Name=who, searchDepth=10)
+            except:
+                self.ChatWith(who)
+                editbox = self.ChatBox.EditControl(Name=who, searchDepth=10)
+        else:
+            editbox = self.ChatBox.EditControl(searchDepth=10)
+        if clear:
+            editbox.SendKeys('{Ctrl}a', waitTime=0)
+        self._show()
+        if not editbox.HasKeyboardFocus:
+            editbox.Click(simulateMove=False)
+
+        t0 = time.time()
+        while True:
+            if time.time() - t0 > 10:
+                raise TimeoutError(f'发送消息超时 --> {editbox.Name} - 【剪切板】')
+            # SetClipboardText(msg)
+            editbox.SendKeys('{Ctrl}v')
+            if editbox.GetValuePattern().Value:
+                break
+        editbox.SendKeys('{Enter}')
+
+
     def SendFiles(self, filepath, who=None):
         """向当前聊天窗口发送文件
         
